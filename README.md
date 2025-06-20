@@ -51,7 +51,6 @@ Python + Ansible installed locally
 ### 🪄 Run Ansible Playbook
 '''
 ansible-playbook ansible/playbooks/ec2-instance.yml
-
 '''
 
 _Follwing command wil_
