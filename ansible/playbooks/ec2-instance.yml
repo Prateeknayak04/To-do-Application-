@@ -1,0 +1,180 @@
+- name: Provision of a ec2 instance
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Creating a security_group
+      amazon.aws.ec2_security_group:
+        name: todo-app
+        description: creating a security group
+        vpc_id: vpc-04550d2e519f89bca
+        rules:
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 8080
+            to_port: 8080
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 5000
+            to_port: 5000
+            cidr_ip: 0.0.0.0/0
+        rules_egress:
+          - proto: all
+            cidr_ip: 0.0.0.0/0
+      register: security_group  
+
+
+    - name: Lunch a ec2 instance
+      amazon.aws.ec2_instance:
+        name: todo-app
+        region: ap-south-1
+        instance_type: t2.micro
+        key_name: test-demo
+        image_id: ami-0b09627181c8d5778
+        security_group: "{{security_group.group_id}}"
+        count: 1
+        wait: yes
+        network:
+          assign_public_ip: true
+      register: ec2
+
+
+    - name: Wait for the instance to be  ready
+      wait_for: 
+        host: "{{ ec2.instances[0].public_dns_name }}"
+        port: 22
+        delay: 30
+        timeout: 300
+        state: started
+      when: ec2.instances is defined and ec2.instances | length > 0
+
+    - name: Add ec2 instance dynamically
+      add_host:
+        name: "{{ ec2.instances[0].public_dns_name }}"
+        groups: lunched_ec2_instances
+        ansible_ssh_private_key_file: "{{ ec2_ssh_key_path }}"
+        ansible_user: ec2-user
+
+    - name: Debug ssh key path 
+      debug:
+        var: ec2_ssh_key_path
+    
+    - name: Debug security group
+      debug:
+        var: groups['lunched_ec2_instances']
+
+
+- name: install packages in dynamic host
+  hosts: lunched_ec2_instances
+  gather_facts: yes
+
+  tasks:
+    - name: install apache and nginx
+      become: yes
+      package:
+        name: httpd
+        state: present
+    
+    - name: start the apahce server
+      become: yes
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Copy the source code
+      become: yes
+      synchronize:
+        src: "{{ playbook_dir }}/../.."
+        dest: "/opt/todo-app"
+        delete: yes
+        recursive: yes
+        rsync_opts:
+          - "--exclude=.github"
+          - "--exclude=ansible"
+          - "--exclude=.venv"
+          - "--exclude=.gitignore"
+          - "--exclude=.python-version"
+          - "--exclude=pyproject.toml"
+          - "--exclude=README.md"
+          - "--exclude=.github"
+          - "--exclude=.github"
+          - "--exclude=uv.lock"
+
+    - name: install pip 
+      become: yes
+      package:
+        name: python3-pip
+        state: present
+
+    - name: Install dependencies from requirements.txt
+      ansible.builtin.pip:
+        requirements: /opt/todo-app/requirements.txt
+        executable: pip3
+        state: present
+
+    - name: install docker 
+      become: true
+      package:
+        name: docker
+        state: present
+      when: docker_installed is undefined
+    
+    - name: Ensure Docker is started and enabled
+      become: true
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+    - name: Add ec2-user to the docker group
+      become: true
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
+
+    - name: Restart docker service
+      become: true
+      systemd:
+        name: docker
+        state: restarted
+
+        
+    - name: Build a docker image.
+      become: true
+      docker_image:
+        build: 
+          path: "~/opt/todo-app"
+        name: todo-app
+        tag: latest
+        state: present
+      when: build_image is defined and build_image == true
+
+    - name: run the docker container
+      become: true
+      community.docker.docker_container:
+        name: todo-app-container
+        image: todo-app:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "5000:5000"
+      when: run_container is defined and run_container == true
+
+    - name: verify the docker container is running
+      become: true
+      shell: docker ps -a | grep todo-app-container
+      register: container_status
+      ignore_errors: true
+    
+    - name: Display the container container_status and
+      debug:
+        var: "{{ container_status.stdout }}"
+
+
+
+
+

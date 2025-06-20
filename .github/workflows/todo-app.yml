@@ -1,0 +1,56 @@
+name: Provision of ec2 instance
+
+on:
+ push:
+  branches:
+   - main
+ 
+
+jobs:
+ build:
+  runs-on: ubuntu-latest
+  
+  steps:
+   - name: checkout the repo
+     uses: actions/checkout@v2
+
+   - name: set up python
+     uses: actions/setup-python@v2
+     with: 
+      python-version: '3.10'
+  
+   - name: install depedencies package
+     run: |
+      python -m pip install --upgrade pip
+      pip install boto3 ansible
+      ansible-galaxy collection install amazon.aws
+
+   - name: configure aws credentials 
+     uses: aws-actions/configure-aws-credentials@v1
+     with:
+      aws-access-key-id: ${{secrets.PRIVATE_ACCESS_KEY}}
+      aws-secret-access-key: ${{secrets.SECRET_ACCESS_KEY}}
+      aws-region: ap-south-1
+  
+   - name: Create ssh key
+     run: |
+      mkdir -p ~/.ssh
+      echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/ec2_key.pem 
+      chmod 600  ~/.ssh/ec2_key.pem 
+
+   - name: Debug ssh key
+     run: ls -l ~/.ssh/ec2_key.pem 
+
+   - name: Run ansible playbook_dir
+     run: | 
+      ansible-playbook ansible/playbooks/ec2-instance.yml \
+      -e "ec2_ssh_key_path=~/.ssh/ec2_key.pem"
+
+  env:
+    PRIVATE_ACCESS_KEY: ${{secrets.PRIVATE_ACCESS_KEY}}
+    SECRET_ACCESS_KEY: ${{secrets.SECRET_ACCESS_KEY}}
+    EC2_SSH_PRIVATE_KEY: ~/.ssh/ec2_key.pem 
+    ANSIBLE_HOST_KEY_CHECKING: False
+
+      
+
