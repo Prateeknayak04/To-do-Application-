@@ -32,37 +32,28 @@ This is a full-stack ToDo application built using **Flask**, featuring **user au
 
 The CI/CD pipeline is defined in .github/workflows/main.yml. On every push to main:
 
-Code is linted/tested (if tests are added)
-
-Docker image is built
-
-Code is pushed to EC2 and the container is restarted using Ansible.
+- Code is linted/tested.
+- Docker image is built.
+- Code is pushed to EC2 and the container is restarted using Ansible.
 
 ### EC2 Deployment with Ansible:
 
-🔧 Prerequisites:
+#### 🔧 Prerequisites:
 
-AWS CLI configured
-
-SSH key setup for EC2
-
-Python + Ansible installed locally
+- AWS CLI configured
+- SSH key setup for EC2
+- Python + Ansible installed locally
 
 ### 🪄 Run Ansible Playbook
-''''
-'''
+
+```
 ansible-playbook ansible/playbooks/ec2-instance.yml
-'''
-''''
+```
 
-_Follwing command wil_
+_Follwing command wil:_
 
-Create a security group
-
-Launch an EC2 instance
-
-Copy your app code
-
-Build Docker container on remote host
-
-Run the Flask app in container
+- Create a security group
+- Launch an EC2 instance
+- Copy your app code
+- Build Docker container on remote host
+- Run the Flask app in container
