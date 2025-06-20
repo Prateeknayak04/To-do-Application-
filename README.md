@@ -28,7 +28,7 @@ This is a full-stack ToDo application built using **Flask**, featuring **user au
 
 ---
 
-🧪 GitHub Actions CI/CD
+### 🧪 GitHub Actions CI/CD
 
 The CI/CD pipeline is defined in .github/workflows/main.yml. On every push to main:
 
@@ -38,7 +38,7 @@ Docker image is built
 
 Code is pushed to EC2 and the container is restarted using Ansible.
 
-EC2 Deployment with Ansible:
+### EC2 Deployment with Ansible:
 
 🔧 Prerequisites:
 
@@ -48,9 +48,13 @@ SSH key setup for EC2
 
 Python + Ansible installed locally
 
-🪄 Run Ansible Playbook
-
+### 🪄 Run Ansible Playbook
+'''
 ansible-playbook ansible/playbooks/ec2-instance.yml
+
+'''
+
+_Follwing command wil_
 
 Create a security group
 
